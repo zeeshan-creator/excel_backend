@@ -18,9 +18,11 @@ class ExcelData2Import implements ToCollection, WithHeadingRow, WithChunkReading
         $data = [];
 
         foreach ($rows as $row) {
+            $gdNumber = $row['gd_number'] ?? null;
+
             $data[] = [
-                'date' => $row['date'] ?? null,
-                'gd_number' => $row['gd_number'] ?? null,
+                'gd_number' => $gdNumber,
+                'date' => $this->extractDateFromGdNumber($gdNumber),
                 'hs_code' => $row['hs_code'] ?? null,
                 'product_description' => $row['product_description'] ?? null,
                 'origin' => $row['origin'] ?? null,
@@ -57,6 +59,21 @@ class ExcelData2Import implements ToCollection, WithHeadingRow, WithChunkReading
 
         DB::table('excel_data_2')->insert($data); // one bulk insert per chunk
     }
+
+
+    protected function extractDateFromGdNumber(?string $gdNumber): ?string
+    {
+        if ($gdNumber && preg_match('/(\d{2}-\d{2}-\d{4})$/', $gdNumber, $matches)) {
+            try {
+                return \Carbon\Carbon::createFromFormat('d-m-Y', $matches[1])->format('Y-m-d');
+            } catch (\Exception $e) {
+                return null; // In case of invalid date format
+            }
+        }
+
+        return null;
+    }
+
 
     public function chunkSize(): int
     {
